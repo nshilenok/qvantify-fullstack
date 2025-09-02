@@ -73,13 +73,17 @@ def get_db():
 def topirHandlerInstance():
     g.projectId = request.headers.get('projectId')
     g.uuid = request.headers.get('uuid')  # Frontend sends uuid header
-    if getattr(g, "uuid", None) is not None and g.uuid != '':
+    logger.debug(f'UUID received: "{g.uuid}", type: {type(g.uuid)}')
+    if g.uuid and g.uuid.strip() != '':
+        logger.debug('Creating topic handler for valid UUID')
         g.th = topicHandler() 
         g.baseTopic = g.th.getCurrentTopic()
+    else:
+        logger.debug('Skipping topic handler - no valid UUID')
 
 @app.before_request
 def responseCounter():
-    if getattr(g, "uuid", None) is not None and g.uuid != '':
+    if hasattr(g, 'th') and g.uuid and g.uuid.strip() != '':
         topics_log = g.th.getTopicsLog()
         if topics_log:	
             g.response_count = topics_log[-1][5]
@@ -91,20 +95,20 @@ def responseCounter():
             if 'message' in request_data:
                 g.response_count += 1
         logger.debug('===Response Counter (before request):===: %s', g.response_count)
+    else:
+        g.response_count = 0
 
 @app.before_request
 def setglobalvars():
-    if getattr(g, "uuid", None) is not None and g.uuid != '':
+    if hasattr(g, 'th') and g.uuid and g.uuid.strip() != '':
         logger.debug('===baseTopic ID (beforere request):===: %s', g.baseTopic)
         g.topic = g.th.switchTopic()
         logger.debug('===Switch ID (beforere request):===: %s', g.topic)
 
 @app.after_request
 def updateCounter(response):
-    user_uuid = getattr(g, 'uuid', None)
-    if user_uuid is not None and user_uuid != '':
+    if hasattr(g, 'th') and g.uuid and g.uuid.strip() != '':
         g.th.updateResponseCounter()
-        return response
     return response
 
 @app.teardown_appcontext
@@ -215,12 +219,25 @@ def findTopicChanges():
     return jsonify(ouptut)
 
 def get_chat_history(uuid, project_id):
-    # Placeholder - implement based on your database schema
-    return []
+    query = "SELECT created_at,role,content,topic FROM records WHERE user_id=%s AND project=%s ORDER by created_at ASC"
+    query_params = (uuid,project_id)
+    results = g.db.query_database_all(query,query_params)
+    records = []
+    for row in results:
+        record_row = (
+                row[0],
+                row[1],
+                row[2],
+                row[3]
+            )
+        records.append(record_row)
+    return records
 
 def store_message(uuid, project_id, message, role, topic_id):
-    # Placeholder - implement based on your database schema
-    pass
+    now = datetime.now(timezone.utc)
+    query = "INSERT INTO records (created_at,project,role,content,topic,user_id) VALUES (%s,%s,%s,%s,%s,%s)"
+    query_params = (now,project_id,role,message,topic_id,uuid)
+    g.db.query_database_insert(query,query_params)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
