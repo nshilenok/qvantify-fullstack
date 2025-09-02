@@ -195,7 +195,14 @@ def heartbeat_launch():
 def test_endpoint():
 	try:
 		project = request.headers.get('projectId')
-		return jsonify(success=True, projectId=project, message="Test endpoint working")
+		user_uuid = request.headers.get('uuid')
+		
+		# Test database connection
+		query = "SELECT COUNT(*) FROM topics WHERE project=%s"
+		result = g.db.query_database_one(query, (project,))
+		topic_count = result[0] if result else 0
+		
+		return jsonify(success=True, projectId=project, uuid=user_uuid, topicCount=topic_count, message="Test endpoint working")
 	except Exception as e:
 		return jsonify(success=False, error=str(e)), 500
 
