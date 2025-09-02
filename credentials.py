@@ -8,10 +8,11 @@ db_config = {
     'port': 5432
 }
 
-# OpenAI API Keys (placeholders for testing)
-openaiapi_key = "your_openai_key"
-openaiapi_panda_key = "your_panda_openai_key"
-azureopenai_key = "your_azure_openai_key"
+# OpenAI API Keys - Use environment variables
+import os
+openaiapi_key = os.environ.get('OPENAI_API_KEY', 'placeholder')
+openaiapi_panda_key = os.environ.get('OPENAI_PANDA_KEY', 'placeholder')
+azureopenai_key = os.environ.get('AZURE_OPENAI_KEY', 'placeholder')
 
 # Project configuration
 panda_project = "your_panda_project_id"

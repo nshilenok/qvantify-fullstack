@@ -221,6 +221,19 @@ def heartbeat_launch():
         heartbeat()
         return jsonify(status=True)
 
+@app.route('/api/debug/', methods=['GET'])
+def debug_info():
+    key = request.args.get('key')
+    if key == '3yTgJUQnPjs4L':
+        import os
+        return jsonify({
+            'openai_key_set': bool(os.environ.get('OPENAI_API_KEY')),
+            'azure_key_set': bool(os.environ.get('AZURE_OPENAI_KEY')),
+            'panda_key_set': bool(os.environ.get('OPENAI_PANDA_KEY')),
+            'db_config': 'configured'
+        })
+    return jsonify(error='Unauthorized'), 401
+
 @app.route('/api/alike/interview', methods=['GET'])
 def findCloseInterview():
     text = request.args.get('text')

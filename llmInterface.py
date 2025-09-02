@@ -89,10 +89,14 @@ class LLM():
 
 	def getResponse(self,messages,tools=None):
 		logger.info('USER %s SENDING THIS TO GPT: %s', g.uuid, messages)
-		if self.api == "openai":
-			return self.getResponseOpenAI(messages,tools)
-		if self.api == "azure":
-			return self.getResponseAzure(messages,tools)
+		try:
+			if self.api == "openai":
+				return self.getResponseOpenAI(messages,tools)
+			if self.api == "azure":
+				return self.getResponseAzure(messages,tools)
+		except Exception as e:
+			logger.exception('Error in LLM getResponse: %s', str(e))
+			raise
 
 
 	def getEmbedding(self,text,api):
