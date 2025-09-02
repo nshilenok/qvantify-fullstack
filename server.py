@@ -36,12 +36,11 @@ def check_if_user_exists():
     query = "SELECT id,project FROM respondents WHERE id=%s"
     query_params = (g.uuid,)
     results = g.db.query_database_one(query,query_params)
-    parameters = (uuid.UUID(g.uuid),uuid.UUID(g.projectId))
-    if parameters == results:
+    if results and str(results[0]) == g.uuid and str(results[1]) == g.projectId:
         app.logger.info('%s logged in successfully', g.uuid)
         pass
     else:
-        app.logger.exception('User not found. Comparing: %s vs %s', parameters, results)
+        app.logger.exception('User not found. Comparing UUID: %s vs %s, Project: %s vs %s', g.uuid, results[0] if results else None, g.projectId, results[1] if results else None)
         raise Exception("Sorry, no user found for this project")
 
 def check_if_project_exists():
@@ -73,14 +72,14 @@ def get_db():
 @app.before_request
 def topirHandlerInstance():
     g.projectId = request.headers.get('projectId')
-    g.uuid = request.headers.get('externalId')  # Note: using externalId like frontend
-    if getattr(g, "uuid", None) is not None:
+    g.uuid = request.headers.get('uuid')  # Frontend sends uuid header
+    if getattr(g, "uuid", None) is not None and g.uuid != '':
         g.th = topicHandler() 
         g.baseTopic = g.th.getCurrentTopic()
 
 @app.before_request
 def responseCounter():
-    if getattr(g, "uuid", None) is not None:
+    if getattr(g, "uuid", None) is not None and g.uuid != '':
         topics_log = g.th.getTopicsLog()
         if topics_log:	
             g.response_count = topics_log[-1][5]
@@ -95,7 +94,7 @@ def responseCounter():
 
 @app.before_request
 def setglobalvars():
-    if getattr(g, "uuid", None) is not None:
+    if getattr(g, "uuid", None) is not None and g.uuid != '':
         logger.debug('===baseTopic ID (beforere request):===: %s', g.baseTopic)
         g.topic = g.th.switchTopic()
         logger.debug('===Switch ID (beforere request):===: %s', g.topic)
@@ -103,7 +102,7 @@ def setglobalvars():
 @app.after_request
 def updateCounter(response):
     user_uuid = getattr(g, 'uuid', None)
-    if user_uuid is not None:
+    if user_uuid is not None and user_uuid != '':
         g.th.updateResponseCounter()
         return response
     return response
