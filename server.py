@@ -163,26 +163,45 @@ def get_project():
 
 @app.route('/api/reply/', methods=['POST'])
 def gpt_response():
-    check_if_user_exists()
-    json = request.get_json()
-    user_response = json['message']
-    
-    chat = conversation(g.th)
-    return jsonify(response=chat.provideResponse(user_response), status=chat.retrieveTopicStatus(), answers=chat.retrieveDefinedAnswers())
+    try:
+        check_if_user_exists()
+        json = request.get_json()
+        user_response = json['message']
+        
+        logger.debug('Processing reply for user: %s, project: %s', g.uuid, g.projectId)
+        logger.debug('baseTopic: %s, topic: %s', getattr(g, 'baseTopic', None), getattr(g, 'topic', None))
+        
+        chat = conversation(g.th)
+        response = chat.provideResponse(user_response)
+        status = chat.retrieveTopicStatus()
+        answers = chat.retrieveDefinedAnswers()
+        
+        return jsonify(response=response, status=status, answers=answers)
+    except Exception as e:
+        logger.exception('Error in gpt_response: %s', str(e))
+        return jsonify(error=str(e)), 500
 
 @app.route('/api/interview/', methods=['GET'])
 def initialize_interview():
-    check_if_user_exists()
-    first_answer = request.args.get('first_answer')
-    chat = conversation(g.th)
-    if first_answer and getattr(g, 'topicIsChanging', None) is not None:
-        logger.info('First answer was provided in GET parameters: %s, for user: %s', first_answer, g.uuid)
-        chat.provideInitialResponse()
-        g.response_count = 1
-        g.baseTopic = g.th.getCurrentTopic()
-        g.topic = g.th.switchTopic()
-        return jsonify(response=chat.provideResponse(first_answer), status=chat.retrieveTopicStatus(), answers=chat.retrieveDefinedAnswers())
-    return jsonify(response=chat.provideInitialResponse(), status=chat.retrieveTopicStatus(), answers=chat.retrieveDefinedAnswers())
+    try:
+        check_if_user_exists()
+        first_answer = request.args.get('first_answer')
+        
+        logger.debug('Initializing interview for user: %s, project: %s', g.uuid, g.projectId)
+        logger.debug('baseTopic: %s, topic: %s', getattr(g, 'baseTopic', None), getattr(g, 'topic', None))
+        
+        chat = conversation(g.th)
+        if first_answer and getattr(g, 'topicIsChanging', None) is not None:
+            logger.info('First answer was provided in GET parameters: %s, for user: %s', first_answer, g.uuid)
+            chat.provideInitialResponse()
+            g.response_count = 1
+            g.baseTopic = g.th.getCurrentTopic()
+            g.topic = g.th.switchTopic()
+            return jsonify(response=chat.provideResponse(first_answer), status=chat.retrieveTopicStatus(), answers=chat.retrieveDefinedAnswers())
+        return jsonify(response=chat.provideInitialResponse(), status=chat.retrieveTopicStatus(), answers=chat.retrieveDefinedAnswers())
+    except Exception as e:
+        logger.exception('Error in initialize_interview: %s', str(e))
+        return jsonify(error=str(e)), 500
 
 @app.route('/api/quote/', methods=['GET'])
 def findClose():
