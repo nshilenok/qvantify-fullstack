@@ -29,12 +29,11 @@ def check_if_user_exists():
 	query = "SELECT id,project FROM respondents WHERE id=%s"
 	query_params = (g.uuid,)
 	results = g.db.query_database_one(query,query_params)
-	parameters = (uuid.UUID(g.uuid),uuid.UUID(g.projectId))
-	if parameters == results:
+	if results and str(results[0]) == g.uuid and str(results[1]) == g.projectId:
 		app.logger.info('%s logged in successfully', g.uuid)
 		pass
 	else:
-		app.logger.exception('User not found. Comparing: %s vs %s', parameters, results)
+		app.logger.exception('User not found. Comparing UUID: %s vs %s, Project: %s vs %s', g.uuid, results[0] if results else None, g.projectId, results[1] if results else None)
 		raise Exception("Sorry, no user found for this project")
 
 def check_if_project_exists():
