@@ -190,18 +190,40 @@ def heartbeat_launch():
 		heartbeat()
 		return jsonify(status=True)
 
-@app.route('/api/test/', methods=['GET'])
-def test_endpoint():
+@app.route('/api/debug/', methods=['GET'])
+def debug_endpoint():
 	try:
 		project = request.headers.get('projectId')
 		user_uuid = request.headers.get('uuid')
 		
-		# Test database connection
-		query = "SELECT COUNT(*) FROM topics WHERE project=%s"
-		result = g.db.query_database_one(query, (project,))
-		topic_count = result[0] if result else 0
+		# Check if user exists
+		if user_uuid:
+			user_query = "SELECT id,project FROM respondents WHERE id=%s"
+			user_result = g.db.query_database_one(user_query, (user_uuid,))
+			user_exists = user_result is not None
+		else:
+			user_exists = False
+			user_result = None
 		
-		return jsonify(success=True, projectId=project, uuid=user_uuid, topicCount=topic_count, message="Test endpoint working")
+		# Check topics for project
+		topic_query = "SELECT COUNT(*) FROM topics WHERE project=%s"
+		topic_result = g.db.query_database_one(topic_query, (project,))
+		topic_count = topic_result[0] if topic_result else 0
+		
+		# Get first topic if exists
+		first_topic_query = "SELECT id, system, topic_type FROM topics WHERE project=%s ORDER BY sequence ASC LIMIT 1"
+		first_topic = g.db.query_database_one(first_topic_query, (project,))
+		
+		return jsonify(
+			success=True, 
+			projectId=project, 
+			uuid=user_uuid,
+			userExists=user_exists,
+			userDbResult=str(user_result) if user_result else None,
+			topicCount=topic_count,
+			firstTopic=str(first_topic) if first_topic else None,
+			message="Debug info"
+		)
 	except Exception as e:
 		return jsonify(success=False, error=str(e)), 500
 
